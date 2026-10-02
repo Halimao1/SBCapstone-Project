@@ -4,6 +4,10 @@
 
 The purpose of this application is to act as an aid when comparing options in order to make a decision. Users can compare options using weighted criteria, calculate rankings as guests, and create an account to save private decisions.
 
+## Live application
+
+[Open Decision Evaluator](https://sbcapstone-project.onrender.com)
+
 ## Features
 
 - Guest decision calculation
@@ -58,6 +62,7 @@ npm run dev
 
 ## API endpoints
 
+- `GET /api/health`
 - `POST /api/evaluations`
 - `POST /api/auth/register`
 - `POST /api/auth/login`
