@@ -1,47 +1,42 @@
+require("dotenv").config();
+const mongoose = require("mongoose");
 const express = require("express");
+const cookieParser = require("cookie-parser");
+const authRoutes = require("./routes/auth");
+const evaluationsRoutes = require("./routes/evaluations");
+const decisionRoutes = require("./routes/decisions");
+const path = require("path");
 const app = express();
+const port = process.env.PORT || 3000;
+
+app.use(cookieParser());
 app.use(express.json());
-app.post("/api/evaluations", (req, res) => {
-  const { options, criteria } = req.body;
-  if (!options || !criteria) {
-    return res.status(400).json({ error: "Options and criteria are required" });
-  }
-  if (!Array.isArray(options) || !Array.isArray(criteria)) {
-    return res
-      .status(400)
-      .json({ error: "Options and criteria must be arrays" });
-  }
-  if (!options.every((option) => Array.isArray(option.scores))) {
-    return res
-      .status(400)
-      .json({ error: "Each option must have a scores array" });
-  }
-  const validCriterionIds = options.every((option) =>
-    option.scores.every((score) =>
-      criteria.some((criterion) => criterion._id === score.criterionId),
-    ),
-  );
-  if (!validCriterionIds) {
-    return res
-      .status(400)
-      .json({ error: "Each score must reference a valid criterion ID" });
-  }
-  const results = options.map((option) => {
-    const contributions = option.scores.map((score) => {
-      const criterion = criteria.find(
-        (criterion) => criterion._id === score.criterionId,
-      );
-      return score.value * criterion.weight;
-    });
-    const total = contributions.reduce((acc, curr) => acc + curr, 0);
-    return { title: option.title, total };
-  });
-  results.sort((a, b) => b.total - a.total);
-  return res.json({ results });
-});
+app.use("/api/auth", authRoutes);
+app.use("/api/evaluations", evaluationsRoutes);
+app.use("/api/decisions", decisionRoutes);
 app.get("/api/health", (req, res) => {
   return res.json({ message: "API is running" });
 });
-app.listen(3000, () => {
-  console.log(`Server is running on port 3000`);
-});
+const clientDistPath = path.join(__dirname, "../client/dist");
+if (process.env.NODE_ENV === "production") {
+  app.use(express.static(clientDistPath));
+
+  app.use((req, res, next) => {
+    if (req.method === "GET" && !req.path.startsWith("/api")) {
+      return res.sendFile(path.join(clientDistPath, "index.html"));
+    }
+    return next();
+  });
+}
+const startServer = async () => {
+  try {
+    await mongoose.connect(process.env.MONGODB_URI);
+    app.listen(port, () => {
+      console.log(`Server is running on port ${port}`);
+    });
+  } catch (error) {
+    console.error("Could not connect to database");
+    console.error(error);
+  }
+};
+startServer();
